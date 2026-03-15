@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Krypto V4.6.7</title>
+    <title>Krypto V4.6.8</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
     <style>
         :root { 
@@ -33,7 +33,7 @@
             position: relative; 
         }
 
-        /* HEADER */
+        /* COMPACT HEADER */
         #header { 
             display: flex; align-items: center; justify-content: space-between; 
             height: 55px; margin-bottom: 5px; 
@@ -53,7 +53,7 @@
             font-weight: bold; cursor: pointer; margin-left: 8px; font-size: 14px;
         }
 
-        /* GAME BOARD (Strictly V464 Styling) */
+        /* COMPACT HAND */
         #hand-container { 
             display: flex; justify-content: center; gap: 4px; 
             margin-bottom: 8px; min-height: 65px; 
@@ -69,6 +69,7 @@
         .card.back { background: var(--card-back); color: #444; border: 1px solid #444; }
         .card.selected { outline: 3px solid #4CAF50; transform: translateY(-3px); }
 
+        /* COMPACT SEED BAR */
         #seed-bar { 
             display: flex; gap: 6px; margin-bottom: 8px; 
             background: rgba(0,0,0,0.3); padding: 6px; border-radius: 8px; 
@@ -88,6 +89,7 @@
             border-radius: 4px; padding: 0 10px; font-size: 14px; height: 30px;
         }
 
+        /* COMPACT INTERACTION ZONE */
         #interaction-zone { 
             display: flex; justify-content: space-around; 
             align-items: center; margin-bottom: 8px;
@@ -114,6 +116,7 @@
         #op-div { bottom: -10px; left: 50%; transform: translateX(-50%); color: #ffeb3b; }
         #op-mult { left: -10px; top: 50%; transform: translateY(-50%); }
 
+        /* COMPACT CONTROLS */
         #controls { 
             display: grid; grid-template-columns: 1fr 1fr 1fr; 
             gap: 8px; margin-top: auto; padding-bottom: 5px;
@@ -126,25 +129,22 @@
         }
         #deal-btn { background: #4CAF50 !important; }
 
-        /* SOLUTIONS OVERLAY FIX */
+        /* OVERLAYS */
+        #win-overlay { 
+            display: none; position: absolute; top:0; left:0; width:100%; height:100%; 
+            background: rgba(0,0,0,0.85); z-index: 100; 
+            flex-direction: column; justify-content: center; align-items: center; 
+        }
         #solutions-overlay { 
             display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
             background: #111; z-index: 200; flex-direction: column; 
         }
         .sol-header { 
             background: #ffeb3b; color: black; 
-            /* Push header down past the iPhone notch and status bar */
-            padding-top: env(safe-area-inset-top, 20px);
-            padding-left: 15px; padding-right: 15px; padding-bottom: 12px;
+            /* FIXED: Pushes header down past iPhone notch */
+            padding: calc(12px + env(safe-area-inset-top, 0px)) 15px 12px 15px; 
             display: flex; justify-content: space-between; 
             align-items: center; font-weight: bold; 
-            min-height: 80px;
-        }
-
-        #win-overlay { 
-            display: none; position: absolute; top:0; left:0; width:100%; height:100%; 
-            background: rgba(0,0,0,0.85); z-index: 100; 
-            flex-direction: column; justify-content: center; align-items: center; 
         }
         
         #toast { 
@@ -170,7 +170,7 @@
         <div id="target-card" class="card target">?</div>
         <div class="header-info">
             <div id="stats-line"><span id="deal-count"></span> <span id="sol-count">(0)</span><button class="help-btn" onclick="toggleSolutions()">?</button></div>
-            <div class="v-badge">V4.6.7</div>
+            <div class="v-badge">V4.6.8</div>
         </div>
     </div>
 
@@ -200,17 +200,14 @@
     </div>
 
     <div id="solutions-overlay">
-        <div class="sol-header">
-            <span>SOLUTIONS</span>
-            <button onclick="toggleSolutions()" style="background:#000; color:#fff; border:none; font-weight:bold; font-size: 14px; padding: 8px 15px; border-radius: 5px;">CLOSE</button>
-        </div>
+        <div class="sol-header"><span>SOLUTIONS</span><button onclick="toggleSolutions()" style="background:none; border:none; font-weight:bold; font-size: 14px;">CLOSE</button></div>
         <div id="sol-list-container" style="overflow-y:auto; flex-grow:1; padding:12px; font-family: monospace; font-size: 12px;"></div>
     </div>
 </div>
 
 <script>
     const DECK = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25];
-    let initialHand=[], currentHand=[], target=0, history=[], selection=[], allValidSolutions=[], globalSeed=1234, gameStarted=false;
+    let initialHand=[], currentHand=[], target=0, history=[], selection=[], allValidSolutions=[], globalSeed=0, gameStarted=false;
     let dealCount = 0;
 
     window.onload = () => {
@@ -236,7 +233,8 @@
 
     function showToast(msg) {
         const toast = document.getElementById("toast");
-        toast.innerText = msg; toast.classList.add("show");
+        toast.innerText = msg;
+        toast.classList.add("show");
         setTimeout(() => { toast.classList.remove("show"); }, 2000);
     }
 
@@ -293,4 +291,93 @@
                     if(i===j)continue;
                     let rN=n.filter((_,x)=>x!==i&&x!==j), rE=e.filter((_,x)=>x!==i&&x!==j);
                     evaluate([...rN, n[i]+n[j]], [...rE, `(${e[i]}+${e[j]})`]);
-                    evaluate([...rN, n
+                    evaluate([...rN, n[i]*n[j]], [...rE, `(${e[i]}*${e[j]})`]);
+                    if(n[i]-n[j] >= 0) evaluate([...rN, n[i]-n[j]], [...rE, `(${e[i]}-${e[j]})`]);
+                    if(n[j] !== 0 && n[i]%n[j] === 0) evaluate([...rN, n[i]/n[j]], [...rE, `(${e[i]}/${e[j]})`]);
+                }
+            }
+        }
+        evaluate(nums, nums.map(String)); return Array.from(res);
+    }
+
+    function restart() { currentHand=[...initialHand]; history=[]; selection=[]; render(); }
+    function undo() { if(history.length > 0) { currentHand = history.pop(); selection = []; render(); } }
+
+    function selectCard(idx) { 
+        if(!gameStarted) return; 
+        if(selection.includes(idx)) { selection = selection.filter(i=>i!==idx); } 
+        else if(selection.length < 2) { selection.push(idx); }
+        render(); 
+    }
+
+    function applyOp(op) {
+        if(selection.length !== 2) return;
+        let v1 = currentHand[selection[0]], v2 = currentHand[selection[1]];
+        if((op==='/' && v1%v2!==0) || (op==='-' && v1-v2<0)) return;
+
+        history.push([...currentHand]); 
+        let res = (op==='+')?v1+v2:(op==='-')?v1-v2:(op==='*')?v1*v2:v1/v2;
+        currentHand = currentHand.filter((_,i)=>!selection.includes(i));
+        currentHand.push(res); selection=[]; render();
+        
+        if(currentHand.length===1 && Math.abs(currentHand[0]-target)<0.001) { 
+            // Confetti Blast
+            confetti({
+                particleCount: 150,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#ffeb3b', '#4CAF50', '#ffffff', '#007aff']
+            });
+            playBuzzer();
+            document.getElementById('win-overlay').style.display='flex'; 
+            gameStarted=false; 
+            render();
+        }
+    }
+
+    function toggleSolutions() {
+        const overlay = document.getElementById('solutions-overlay');
+        overlay.style.display = overlay.style.display !== 'flex' ? 'flex' : 'none';
+        if(overlay.style.display === 'flex') {
+            document.getElementById('sol-list-container').innerHTML = allValidSolutions.map((s, i) => `<div style="padding:8px; border-bottom:1px solid #333; font-size:12px; color:#ddd;">${i+1}. ${s.replace(/\*/g,'×')} = ${target}</div>`).join('');
+        }
+    }
+
+    function render() {
+        const cont = document.getElementById('hand-container'); 
+        cont.innerHTML = '';
+        const targetCard = document.getElementById('target-card');
+        
+        if(!gameStarted && initialHand.length === 0) {
+            for(let i=0; i<5; i++) { const d = document.createElement('div'); d.className = 'card back'; d.innerText = 'K'; cont.appendChild(d); }
+            targetCard.innerText = '?';
+        } else {
+            currentHand.forEach((v,i)=>{
+                const d = document.createElement('div'); d.className = `card ${selection.includes(i)?'selected':''}`;
+                d.innerText = v; d.onclick = ()=>selectCard(i); cont.appendChild(d);
+            });
+            targetCard.innerText = target;
+        }
+
+        const opMinus = document.getElementById('op-minus');
+        const opDiv = document.getElementById('op-div');
+        if (selection.length === 2) {
+            let a = currentHand[selection[0]], b = currentHand[selection[1]];
+            opMinus.style.opacity = (a - b >= 0) ? '1' : '0.1';
+            opDiv.style.opacity = (b !== 0 && a % b === 0) ? '1' : '0.1';
+        } else {
+            opMinus.style.opacity = '1';
+            opDiv.style.opacity = '1';
+        }
+
+        document.getElementById('deal-count').innerText = dealCount > 0 ? `#${dealCount}` : '';
+        document.getElementById('sol-count').innerText = `(${allValidSolutions.length})`;
+        
+        document.getElementById('slot-left').innerHTML = selection[0]!==undefined?`<div class="card">${currentHand[selection[0]]}</div>`:'';
+        document.getElementById('slot-right').innerHTML = selection[1]!==undefined?`<div class="card">${currentHand[selection[1]]}</div>`:'';
+    }
+
+    render();
+</script>
+</body>
+</html>
